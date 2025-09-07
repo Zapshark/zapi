@@ -1,0 +1,55 @@
+{
+  "name": "zapi",
+  "version": "0.1.0",
+  "description": "Zapshark ZAPI Framework - A lightweight and flexible Node.js framework for building RESTful APIs with Express and Mongoose.",
+  "repository": {
+    "type": "git",
+    "url": "git+"
+  },
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/ExampleApp/index.js",
+    "test": "echo \"No tests yet\" && exit 0",
+    "clean": "rimraf node_modules"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./entries/standalone": "./src/Entries/AppStandalone.js",
+    "./entries/cluster": "./src/Entries/AppCluster.js"
+  },
+  "keywords": [
+    "zapi",
+    "framework",
+    "nodejs",
+    "zapshark",
+    "api",
+    "express",
+    "mongoose",
+    "rest",
+    "http"
+  ],
+  "author": "Zapshark Technologies",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "dotenv-expand": "^12.0.2",
+    "express": "^5.0.0",
+    "express-validator": "^7.2.1",
+    "ioredis": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "lodash.merge": "^4.6.2",
+    "mongodb": "^6.17.0",
+    "mongoose": "^8.16.4",
+    "mysql2": "^3.14.1",
+    "semver": "^7.7.2",
+    "socket.io": "^4.8.1",
+    "winston": "^3.17.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.0"
+  }
+}
