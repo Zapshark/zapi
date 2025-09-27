@@ -1,5 +1,8 @@
 'use strict';
 
+const ZAPI_VERSION = require('./core/Version').ZAPI_VERSION;
+console.log(`ZAPI Version: ${ZAPI_VERSION}`);
+
 // Load and set configuration utilities
 const { loadConfig, setConfig } = require('./core/Config');
 
