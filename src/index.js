@@ -1,103 +1,55 @@
 'use strict';
 
-const ZapiFramework = require('./Core/ZapiFramework');
-const BaseArtifact = require('./Core/BaseArtifact');
-const BaseModule = require('./Core/BaseModule');
-const BaseService = require('./Core/BaseService');
-const BaseRepository = require('./Core/BaseRepository');
-const BaseModel = require('./Core/BaseModel');
-const BaseController = require('./Core/BaseController');
-const BaseMongoRepository = require('./Core/BaseMongoRepository');
-const ClusterLauncher = require('./Core/ClusterLauncher');
-const { launchCluster } = require('./Core/ClusterLauncher');
-const EnvLoader = require('./Core/EnvLoader'); // correct case
-const Logger = require('./Core/Logger'); // correct case
-const ZLog = new Logger(); // alias for backward compatibility
+// Load and set configuration utilities
+const { loadConfig, setConfig } = require('./core/Config');
 
-// Expose Logger class for custom transports
+// Main coordinator for managing servers, workers, and lifecycle
+const { Coordinator } = require('./server/Coordinator');
 
+// Base class for lifecycle management
+const { BaseLifecycle } = require('./core/BaseLifecycle');
 
+// Utilities for route introspection and indexing
+const { describeRoutes, withRouteIndex } = require('./http/RouteIntrospect');
 
-// Cache key helpers
-const CacheKeyRegistry = require('./Core/CacheKeyRegistry');
-const { getCacheKey, buildKey } = CacheKeyRegistry;
-
-// Route DSL + OpenAPI
-const RouteDSL = require('./Core/RouteDSL');
-const { attach, GET, POST, PUT, PATCH, DELETE, getAttached } = RouteDSL;
-const { buildOpenAPI } = require('./Core/OpenAPI');
-
-// Named-middleware helper
-function mw(framework, name /*, ...args later if you add parametrized variants */) {
-    const fn = framework.getMiddleware?.(name);
-    if (!fn) throw new Error(`[zapi] middleware "${name}" not found`);
-    return fn;
-}
-
-
-
-        /**
- * Convenience helper so apps can do:
- *   const { createHttpServer } = require('zapi');
+/**
+ * Bootstraps the ZAPI application.
+ * Loads configuration, initializes the coordinator, and starts all services.
+ * @param {Object} customOverride - Optional config overrides
+ * @returns {Object} - Coordinator instance, config, and stop function
  */
-async function createHttpServer({
-                                    appRoot,
-                                    config = {},
-                                    log = ZLog,
-                                    port,
-                                    envPath,
-                                    envOverride = false,
-                                    envSilent = false
-                                } = {}) {
-    if (!appRoot) throw new Error('createHttpServer({ appRoot }) required');
-
-    const effectiveEnvPath = envPath ?? config.envPath;
-    try {
-        EnvLoader.load({
-            appDir: appRoot,
-            envPath: effectiveEnvPath,
-            override: Boolean(envOverride || config.envOverride),
-            silent: Boolean(envSilent || config.envSilent),
-        });
-    } catch (e) {
-        log?.warn?.(`[zapi] Env load warning: ${e.message}`);
-    }
-
-    const framework = new ZapiFramework({ config, ZLog });
-    return framework.createHttpServer({ appRoot, port });
+async function bootstrap(customOverride) {
+    const merged = loadConfig(customOverride);
+    setConfig(merged);
+    const coordinator = new Coordinator(merged);
+    await coordinator.init();
+    await coordinator.start();
+    return { coordinator, config: merged, stop: async () => { try { await coordinator.stop?.(); } catch {} } };
 }
 
 module.exports = {
-    ZLog,
-    Logger,
-    // Orchestrator
-    ZapiFramework,
-    // Base classes
-    BaseArtifact,
-    BaseModule,
-    BaseService,
-    BaseRepository,
-    BaseModel,
-    BaseController,
-    BaseMongoRepository,
-    // Helpers
-    createHttpServer,
-    // Middleware helper
-    mw,
-    // Route DSL exports
-    RouteDSL,
-    attach, GET, POST, PUT, PATCH, DELETE, getAttached,
-    // OpenAPI builder
-    buildOpenAPI,
-    // Cache key registry + top-level helpers
-    CacheKeyRegistry,
-    ClusterLauncher,
-    launchCluster,
-    getCacheKey,
-    buildKey,
+    // Lifecycle management
+    bootstrap,
+    Coordinator,
+
+    // Configuration and registries
+    ...require('./core/Config'),
+    ...require('./core/registry/services'),
+    ...require('./core/registry/controllers'),
+    ...require('./core/registry/middleware'),
+
+    // Database and HTTP utilities
+    ...require('./db/MongooseManager'),
+    buildRouter: require('./http/Router').buildRouter,
+    createCache: require('./cache/RedisCache').createCache,
+
+    // WebSocket server and message bus
+    startWebSocketServer: require('./ws/WebSocketServer').startWebSocketServer,
+    MessageBus: require('./ws/MessageBus').MessageBus,
+
+    // Utility functions
+    describeRoutes,
+    withRouteIndex,
+    BaseLifecycle,
+    BaseLifeCycle: BaseLifecycle // Alias for compatibility
 };
-// entries
-module.exports.AppStandalone = require('./Entries/AppStandalone').AppStandalone;
-module.exports.AppCluster    = require('./Entries/AppCluster').AppCluster;
-module.exports.Logger = Logger;
-module.exports.ZLog = ZLog;
