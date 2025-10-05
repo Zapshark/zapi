@@ -8,6 +8,11 @@ permissions:
   contents: read
   id-token: write
 
+# Force PowerShell on Windows self-hosted runners
+defaults:
+  run:
+    shell: pwsh
+
 jobs:
   build:
     runs-on: self-hosted
@@ -15,6 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -24,20 +30,22 @@ jobs:
         run: |
           node -v
           npm -v
-          echo "Scripts:" && node -p "require('./package.json').scripts"
-          echo "Has lockfile? ->" && [ -f package-lock.json ] && echo yes || echo no
+          Write-Host "Scripts:"; node -p "require('./package.json').scripts"
+          Write-Host "Has lockfile? -> " -NoNewline
+          if (Test-Path "package-lock.json") { Write-Host "yes" } else { Write-Host "no" }
 
       - name: Install deps (no audit/fund noise)
         run: npm ci --no-audit --fund=false
 
-      # Only run tests if a "test" script exists
       - name: Run tests (if present)
         run: |
-          if node -e "process.exit(+(!!(require('./package.json').scripts||{}).test===false))"; then
-            echo "No test script found; skipping."
-          else
+          $hasTest = node -p "(require('./package.json').scripts||{}).test ? '1' : ''"
+          if ($hasTest) {
+            Write-Host "Running npm test…"
             npm test
-          fi
+          } else {
+            Write-Host "No test script found; skipping."
+          }
 
   publish-npm:
     needs: build
@@ -46,6 +54,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -53,32 +62,43 @@ jobs:
           cache: 'npm'
 
       - name: Configure npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          $content = "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
+          $npmrc = Join-Path $HOME ".npmrc"
+          Set-Content -Path $npmrc -Value $content -Encoding Ascii
+          Write-Host "Wrote $npmrc"
 
       - name: Verify tag matches version (optional)
         run: |
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          TAG="${GITHUB_REF##*/}"
-          echo "Tag: $TAG  Package: v$PKG_VERSION"
-          [ "v$PKG_VERSION" = "$TAG" ] || { echo "Tag/package mismatch"; exit 1; }
+          $pkg = node -p "require('./package.json').version"
+          $tag = "${{ github.ref }}".Replace("refs/tags/","")
+          Write-Host "Tag: $tag  Package: v$pkg"
+          if ("v$pkg" -ne $tag) {
+            Write-Error "Tag/package mismatch"; exit 1
+          }
 
       - name: Install deps
         run: npm ci --no-audit --fund=false
 
-      # If you build artifacts (e.g., transpile), do it here:
+      # If you build artifacts (e.g., transpile/merge), do it here:
       # - run: npm run build
+      # - run: npm run merge-src
 
       - name: Publish to npm
         run: npm publish --access public --provenance
+
       - name: Show last npm debug log if present
         if: failure()
         run: |
-          LOG=$(ls -t ~/.npm/_logs/* 2>/dev/null | head -n 1 || true)
-          if [ -n "$LOG" ]; then
-          echo "---- npm debug log ----"
-          cat "$LOG"
-          else
-          echo "No npm debug log found."
-          fi
+          $logDir = Join-Path $HOME ".npm\_logs"
+          if (Test-Path $logDir) {
+            $log = Get-ChildItem $logDir -Filter *.log | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($log) {
+              Write-Host "---- npm debug log ----"
+              Get-Content $log.FullName
+            } else {
+              Write-Host "No npm debug log found."
+            }
+          } else {
+            Write-Host "No npm debug dir found."
+          }
