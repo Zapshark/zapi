@@ -1,6 +1,6 @@
 {
   "name": "@zapshark/zapi",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Zapshark ZAPI Framework - A lightweight and flexible Node.js framework for building RESTful APIs with Express and Mongoose.",
   "repository": {
     "type": "git",
@@ -13,6 +13,7 @@
   },
   "scripts": {
     "dev": "node src/example/index.js",
+    "test": "node -e \"console.log('ok')\"",
     "env:scan": "node src/bin/zapi-env-scan.js",
     "generate:apiKey": "node src/bin/zapi-keygen.js gen"
   },

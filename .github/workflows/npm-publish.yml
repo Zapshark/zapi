@@ -1,33 +1,66 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
-
-name: Node.js Package
+name: Publish @zapshark/zapi to npm on Release
 
 on:
   release:
     types: [created]
+
+permissions:
+  contents: read
+  id-token: write  # enables OIDC for npm provenance (optional but recommended)
 
 jobs:
   build:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # good practice for tags/versions
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npm test
+          cache: 'npm'
+      - name: Install deps
+        run: npm ci
+      - name: Lint/Tests
+        run: npm test
 
   publish-npm:
     needs: build
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
-      - run: npm ci
-      - run: npm publish
+          cache: 'npm'
+
+      # Write .npmrc with the token (do NOT commit .npmrc)
+      - name: Configure npm auth
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
         env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Optional: assert tag == package.json version
+      - name: Verify tag matches version
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG="${GITHUB_REF##*/}"
+          echo "Tag: $TAG  Package: v$PKG_VERSION"
+          if [ "v$PKG_VERSION" != "$TAG" ]; then
+            echo "Tag v$PKG_VERSION mismatch (got $TAG)"; exit 1;
+          fi
+
+      - name: Install deps
+        run: npm ci
+
+      # (Optional) run any prepublish steps here, e.g. build, typegen, merge-src, etc.
+      # - run: npm run merge-src
+
+      - name: Publish to npm
+        run: |
+          # --provenance adds supply chain metadata via OIDC (works on public repos)
+          npm publish --access public --provenance
