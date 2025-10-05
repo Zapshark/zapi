@@ -1,6 +1,6 @@
 {
   "name": "@zapshark/zapi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Zapshark ZAPI Framework - A lightweight and flexible Node.js framework for building RESTful APIs with Express and Mongoose.",
   "repository": {
     "type": "git",
