@@ -77,9 +77,6 @@ jobs:
             Write-Error "Tag/package mismatch"; exit 1
           }
 
-      - name: Install deps
-        run: npm ci --no-audit --fund=false
-
       - name: Check npm auth & registry
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -89,7 +86,14 @@ jobs:
           Write-Host "whoami:"; npm whoami
           Write-Host "pkg name:"; node -p "require('./package.json').name"
 
+      - name: Install deps
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm ci --no-audit --fund=false
+
       - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public --provenance
 
       - name: Show last npm debug log if present
