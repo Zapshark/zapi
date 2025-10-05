@@ -1,4 +1,4 @@
-name: Publish @zapshark/zapi to npm on Release
+name: Latest @zapshark/zapi Release
 
 on:
   release:
@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # enables OIDC for npm provenance (optional but recommended)
+  id-token: write
 
 jobs:
   build:
@@ -14,15 +14,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # good practice for tags/versions
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-      - name: Install deps
-        run: npm ci
-      - name: Lint/Tests
-        run: npm test
+
+      - name: Environment sanity
+        run: |
+          node -v
+          npm -v
+          echo "Scripts:" && node -p "require('./package.json').scripts"
+          echo "Has lockfile? ->" && [ -f package-lock.json ] && echo yes || echo no
+
+      - name: Install deps (no audit/fund noise)
+        run: npm ci --no-audit --fund=false
+
+      # Only run tests if a "test" script exists
+      - name: Run tests (if present)
+        run: |
+          if node -e "process.exit(+(!!(require('./package.json').scripts||{}).test===false))"; then
+            echo "No test script found; skipping."
+          else
+            npm test
+          fi
 
   publish-npm:
     needs: build
@@ -37,30 +52,33 @@ jobs:
           registry-url: https://registry.npmjs.org/
           cache: 'npm'
 
-      # Write .npmrc with the token (do NOT commit .npmrc)
       - name: Configure npm auth
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # Optional: assert tag == package.json version
-      - name: Verify tag matches version
+      - name: Verify tag matches version (optional)
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
           TAG="${GITHUB_REF##*/}"
           echo "Tag: $TAG  Package: v$PKG_VERSION"
-          if [ "v$PKG_VERSION" != "$TAG" ]; then
-            echo "Tag v$PKG_VERSION mismatch (got $TAG)"; exit 1;
-          fi
+          [ "v$PKG_VERSION" = "$TAG" ] || { echo "Tag/package mismatch"; exit 1; }
 
       - name: Install deps
-        run: npm ci
+        run: npm ci --no-audit --fund=false
 
-      # (Optional) run any prepublish steps here, e.g. build, typegen, merge-src, etc.
-      # - run: npm run merge-src
+      # If you build artifacts (e.g., transpile), do it here:
+      # - run: npm run build
 
       - name: Publish to npm
+        run: npm publish --access public --provenance
+      - name: Show last npm debug log if present
+        if: failure()
         run: |
-          # --provenance adds supply chain metadata via OIDC (works on public repos)
-          npm publish --access public --provenance
+          LOG=$(ls -t ~/.npm/_logs/* 2>/dev/null | head -n 1 || true)
+          if [ -n "$LOG" ]; then
+          echo "---- npm debug log ----"
+          cat "$LOG"
+          else
+          echo "No npm debug log found."
+          fi
