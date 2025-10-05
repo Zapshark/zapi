@@ -4,6 +4,7 @@ const { BaseLifecycle } = require('../BaseLifecycle');
 const { resolveService, setService } = require('../registry/services');
 const Outage = require('../infra/OutageDeduper');
 
+const { getServerName } = require('../Config');
 function retryMs(times){ return Math.min(times * 10000, 60000); }
 function attachQuiet(c, key){
     const { resolveService } = require('../registry/services');
@@ -49,7 +50,7 @@ class RedisEventService extends BaseLifecycle {
 
         await this.sub.psubscribe('zapi:*');
         const selfPid = process.pid, selfWI = Number(process.env.WORKER_INDEX ?? -1);
-        const selfOrigin = (process.env.ZAPI_SERVER_NAME || 'zapiAppServer');
+ const selfOrigin = getServerName();
 
         this.sub.on('pmessage', (_p, channel, message) => {
             try {

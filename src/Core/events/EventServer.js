@@ -3,7 +3,7 @@
 const { EventEmitter } = require('node:events');
 const { BaseLifecycle } = require('../BaseLifecycle');
 const { setService } = require('../registry/services');
-
+const { getServerName } = require('../Config');
 class EventServer extends BaseLifecycle {
     static artifactName = 'EventServer';
     static artifactKind = 'service';
@@ -48,7 +48,8 @@ class EventServer extends BaseLifecycle {
         const Health = this.resolveService ? this.resolveService('HealthService') : null;
         const state = Health?.getState ? Health.getState() : { status: 'Ok', meta: {} };
 
-        const origin = (process.env.ZAPI_SERVER_NAME || 'zapiAppServer');
+
+        const origin = getServerName();
         const env = {
             event,
             eventHeader: {

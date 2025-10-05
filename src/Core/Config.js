@@ -26,6 +26,18 @@ function tryRequire(abs) {
         return null;
     }
 }
+// src/core/Config.js (near exports)
+function getServerName() {
+    try {
+        const cfg = getConfig();
+        return (cfg?.zapi?.serverName)
+            || process.env.ZAPI_SERVER_NAME
+            || 'zapiAppServer';
+    } catch {
+        return process.env.ZAPI_SERVER_NAME || 'zapiAppServer';
+    }
+}
+
 
 /**
  * Build candidate app/ directories to search for config/bootstrap/routes.
@@ -167,5 +179,6 @@ module.exports = {
     loadConfig, getConfig, setConfig,
     deepMerge,
     // exposed for tests/power-users
-    appDirCandidates
+    appDirCandidates,
+    getServerName,
 };
