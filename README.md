@@ -1,3 +1,5 @@
+[![Latest @zapshark/zapi NPM Release](https://github.com/Zapshark/zapi/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/Zapshark/zapi/actions/workflows/npm-publish.yml)
+
 # ZAPI Framework (Node.js) — `@zapshark/zapi`
 
 A lightweight, batteries‑included Node.js framework for building scalable APIs and realtime apps.
