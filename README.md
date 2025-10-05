@@ -1,4 +1,7 @@
-[![Latest @zapshark/zapi NPM Release](https://github.com/Zapshark/zapi/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/Zapshark/zapi/actions/workflows/npm-publish.yml)
+[![npm version](https://img.shields.io/npm/v/%40zapshark%2Fzapi.svg)](https://www.npmjs.com/package/@zapshark/zapi)
+[![npm downloads](https://img.shields.io/npm/dm/%40zapshark%2Fzapi.svg)](https://www.npmjs.com/package/@zapshark/zapi)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![publish status](https://github.com/Zapshark/zapi/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/Zapshark/zapi/actions/workflows/npm-publish.yml)
 
 # ZAPI Framework (Node.js) — `@zapshark/zapi`
 
