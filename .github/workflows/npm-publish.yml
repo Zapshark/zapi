@@ -80,9 +80,14 @@ jobs:
       - name: Install deps
         run: npm ci --no-audit --fund=false
 
-      # If you build artifacts (e.g., transpile/merge), do it here:
-      # - run: npm run build
-      # - run: npm run merge-src
+      - name: Check npm auth & registry
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          Write-Host "registry:"; npm config get registry
+          $scopeReg = (npm config get "@zapshark:registry" 2>$null); if ($LASTEXITCODE -ne 0 -or -not $scopeReg) { $scopeReg="(no scope override)" }; Write-Host "@zapshark:registry:" $scopeReg
+          Write-Host "whoami:"; npm whoami
+          Write-Host "pkg name:"; node -p "require('./package.json').name"
 
       - name: Publish to npm
         run: npm publish --access public --provenance
