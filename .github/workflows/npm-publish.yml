@@ -96,7 +96,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public --provenance
 
-      - name: Show last npm debug log if present.
+      - name: Show last npm debug log if present
         if: failure()
         run: |
           $logDir = Join-Path $HOME ".npm\_logs"
